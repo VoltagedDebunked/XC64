@@ -3,65 +3,90 @@
 
 #include <windows.h>
 #include <iostream>
+#include <string>
 
-// Class to manage loading and unloading of DLLs
 class LibLoader {
 public:
-    // Constructor that takes names of two DLLs to load
+    ///
+    /// Constructor that takes the names of two DLLs to load.
+    ///
     LibLoader(const std::string& dll1, const std::string& dll2)
-        : hDll1(nullptr), hDll2(nullptr) {
-        // Load the first DLL
-        hDll1 = LoadLibrary(dll1.c_str());
-        if (!hDll1) {
-            std::cerr << "Failed to load " << dll1 << std::endl;
-            return;
+        : hDll1(nullptr), hDll2(nullptr), func1(nullptr), func2(nullptr) {
+        ///
+        /// Attempt to load the DLLs.
+        ///
+        if (!loadDll(dll1, dll2)) {
+            return; /// Exit if DLLs could not be loaded.
         }
 
-        // Load the second DLL
-        hDll2 = LoadLibrary(dll2.c_str());
-        if (!hDll2) {
-            std::cerr << "Failed to load " << dll2 << std::endl;
-            FreeLibrary(hDll1); // Free the first DLL if the second fails to load
-            return;
+        ///
+        /// Attempt to retrieve function pointers from the DLLs.
+        ///
+        if (!retrieveFunction("FunctionFromFirstDll", func1, hDll1, dll1)) {
+            FreeLibrary(hDll1); /// Unload DLLs if function retrieval fails.
+            FreeLibrary(hDll2);
+            return; /// Exit if function retrieval fails.
         }
-
-        // Retrieve a function pointer from the first DLL
-        func1 = (FunctionType)GetProcAddress(hDll1, "FunctionFromFirstDll");
-        if (!func1) {
-            std::cerr << "Failed to get function from " << dll1 << std::endl;
-            FreeLibrary(hDll1); // Free the first DLL
-            FreeLibrary(hDll2); // Free the second DLL
-            return;
-        }
-
-        // Retrieve a function pointer from the second DLL
-        func2 = (FunctionType)GetProcAddress(hDll2, "FunctionFromSecondDll");
-        if (!func2) {
-            std::cerr << "Failed to get function from " << dll2 << std::endl;
-            FreeLibrary(hDll1); // Free the first DLL
-            FreeLibrary(hDll2); // Free the second DLL
-            return;
+        if (!retrieveFunction("FunctionFromSecondDll", func2, hDll2, dll2)) {
+            FreeLibrary(hDll1); /// Unload DLLs if function retrieval fails.
+            FreeLibrary(hDll2);
+            return; /// Exit if function retrieval fails.
         }
     }
 
-    // Destructor that ensures DLLs are unloaded
+    ///
+    /// Destructor that ensures DLLs are unloaded.
+    ///
     ~LibLoader() {
-        if (hDll1) FreeLibrary(hDll1); // Unload the first DLL if it was loaded
-        if (hDll2) FreeLibrary(hDll2); // Unload the second DLL if it was loaded
+        if (hDll1) FreeLibrary(hDll1); /// Unload the first DLL if it was loaded.
+        if (hDll2) FreeLibrary(hDll2); /// Unload the second DLL if it was loaded.
     }
 
-    // Method to call both functions from the loaded DLLs
+    ///
+    /// Method to call both functions from the loaded DLLs.
+    ///
     void CombineFunctions() {
-        if (func1) func1(); // Call function from the first DLL if it's valid
-        if (func2) func2(); // Call function from the second DLL if it's valid
+        if (func1) func1(); /// Call function from the first DLL if it's valid.
+        if (func2) func2(); /// Call function from the second DLL if it's valid.
     }
 
 private:
-    typedef void (*FunctionType)(); // Typedef for function pointer type
-    HMODULE hDll1; // Handle to the first DLL
-    HMODULE hDll2; // Handle to the second DLL
-    FunctionType func1; // Function pointer to a function in the first DLL
-    FunctionType func2; // Function pointer to a function in the second DLL
+    typedef void (*FunctionType)(); /// Typedef for function pointer type.
+    HMODULE hDll1; /// Handle to the first DLL.
+    HMODULE hDll2; /// Handle to the second DLL.
+    FunctionType func1; /// Function pointer to a function in the first DLL.
+    FunctionType func2; /// Function pointer to a function in the second DLL.
+
+    ///
+    /// Attempts to load the DLLs and returns true if successful, false otherwise.
+    ///
+    bool loadDll(const std::string& dll1, const std::string& dll2) {
+        hDll1 = LoadLibrary(dll1.c_str()); /// Load the first DLL.
+        if (!hDll1) {
+            std::cerr << "Failed to load " << dll1 << std::endl;
+            return false; /// Return false if loading fails.
+        }
+
+        hDll2 = LoadLibrary(dll2.c_str()); /// Load the second DLL.
+        if (!hDll2) {
+            std::cerr << "Failed to load " << dll2 << std::endl;
+            FreeLibrary(hDll1); /// Unload the first DLL if the second fails to load.
+            return false; /// Return false if loading fails.
+        }
+        return true; /// Return true if both DLLs are loaded successfully.
+    }
+
+    ///
+    /// Attempts to retrieve a function pointer from a DLL and returns true if successful, false otherwise.
+    ///
+    bool retrieveFunction(const char* functionName, FunctionType& func, HMODULE hDll, const std::string& dllName) {
+        func = reinterpret_cast<FunctionType>(GetProcAddress(hDll, functionName)); /// Retrieve the function pointer.
+        if (!func) {
+            std::cerr << "Failed to get function " << functionName << " from " << dllName << std::endl;
+            return false; /// Return false if retrieval fails.
+        }
+        return true; /// Return true if function pointer is retrieved successfully.
+    }
 };
 
 #endif // LIBLOADER_H
