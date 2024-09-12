@@ -21,8 +21,13 @@
 #endif
 
 // Forward declarations
-void platform_specific_function();
-std::vector<std::string> get_system_info();
+#ifdef OS_WINDOWS
+    typedef void (*SystemFunction)();
+    SystemFunction get_system_function();
+#elif defined(OS_MACOS) || defined(OS_LINUX)
+    typedef void (*SystemFunction)();
+    SystemFunction get_system_function();
+#endif
 
 int main() {
     std::cout << "OS Detection and System Information" << std::endl;
@@ -36,7 +41,9 @@ int main() {
         std::cout << "Running on Linux" << std::endl;
     #endif
 
-    platform_specific_function();
+    // Simulated dynamic linking
+    SystemFunction sys_func = get_system_function();
+    sys_func();
 
     // Get additional system info
     std::vector<std::string> sys_info = get_system_info();
@@ -49,7 +56,7 @@ int main() {
 }
 
 #ifdef OS_WINDOWS
-void platform_specific_function() {
+void windows_specific_function() {
     SYSTEM_INFO sysInfo;
     GetSystemInfo(&sysInfo);
     std::cout << "Windows-specific function:" << std::endl;
@@ -73,8 +80,12 @@ std::vector<std::string> get_system_info() {
 
     return info;
 }
+
+SystemFunction get_system_function() {
+    return windows_specific_function;
+}
 #elif defined(OS_MACOS)
-void platform_specific_function() {
+void macos_specific_function() {
     long numCPU = sysconf(_SC_NPROCESSORS_ONLN);
     std::cout << "macOS-specific function:" << std::endl;
     std::cout << "Number of processors: " << numCPU << std::endl;
@@ -100,8 +111,12 @@ std::vector<std::string> get_system_info() {
 
     return info;
 }
+
+SystemFunction get_system_function() {
+    return macos_specific_function;
+}
 #elif defined(OS_LINUX)
-void platform_specific_function() {
+void linux_specific_function() {
     long numCPU = sysconf(_SC_NPROCESSORS_ONLN);
     std::cout << "Linux-specific function:" << std::endl;
     std::cout << "Number of processors: " << numCPU << std::endl;
@@ -128,12 +143,8 @@ std::vector<std::string> get_system_info() {
 
     return info;
 }
-#endif
 
 SystemFunction get_system_function() {
-    #ifdef OS_WINDOWS
-        return windows_specific_function;
-    #elif defined(OS_MACOS) || defined(OS_LINUX)
-        return platform_specific_function;
-    #endif
+    return linux_specific_function;
 }
+#endif
