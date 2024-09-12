@@ -9,8 +9,40 @@ on:
       - master
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Create build directory
+      run: mkdir build
+
+    - name: Navigate to build directory and run CMake
+      run: |
+        cd build
+        cmake ..
+        cmake --build .
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Create build directory
+      run: mkdir build
+
+    - name: Navigate to build directory and run CMake
+      run: |
+        cd build
+        cmake ..
+        cmake --build .
+
+  build-macos:
+    runs-on: macos-latest
 
     steps:
     - name: Checkout repository
