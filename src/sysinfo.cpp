@@ -29,7 +29,7 @@ SystemFunction get_system_function() {
     #endif
 }
 
-int main() {
+int sysinfo() {
     std::cout << "OS Detection and System Information" << std::endl;
     std::cout << "-----------------------------------" << std::endl;
 
