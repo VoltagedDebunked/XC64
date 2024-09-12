@@ -10,33 +10,28 @@ XC64 is a robust framework designed for developing dynamic applications using C 
 
 ## Getting Started
 
-1. **Setup CMake**: Ensure that CMake is installed on your system. You can download it from the [CMake official website](https://cmake.org/download/).
+**1. Install XC64**
 
-2. **Clone the Repository**: Obtain the XC64 framework source code from its repository.
+Install XC64 by visiting the [downloads page](https://xc64project.vercel.app/downloads).
 
-    ```bash
-    git clone <repository-url>
-    ```
+**2. Set as PATH**
 
-3. **Configure the Project**: Navigate to the project directory and configure the build with CMake.
+Set XC64's Executable to be in your system's PATH.
 
+Right-click on the Start Button.
+Select “System” from the context menu.
+Click “Advanced system settings”
+Go to the “Advanced” tab.
+Click “Environment Variables…”
+Click variable called “Path” and click “Edit…”
+Click “New”
+Enter the path to the folder containing the destination of XC64 in your PATH.
+
+**3. Use commands**
+
+Use commands to do stuff like `dll linking`, for example:
 ```bash
-cd xc64
-mkdir build
-cd build
-cmake ..
-```
-
-4. **Build the Project**: Compile the project using CMake.
-
-```bash
-cmake --build .
-```
-
-5. **Run the Application**: Execute your dynamic application built with XC64.
-
-```bash
-./your_application
+xc64 dll1.dll dll2.dll
 ```
 
 ## Contributing
