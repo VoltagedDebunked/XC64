@@ -1,4 +1,4 @@
-#include "lib/library-loader.hpp"
+#include "lib/lib-linker.hpp"
 #include <cstdio>
 
 int main(int argc, char* argv[]) {
