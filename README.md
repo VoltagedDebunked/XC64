@@ -31,7 +31,7 @@ Enter the path to the folder containing the destination of XC64 in your PATH.
 
 Use commands to do stuff like `dll linking`, for example:
 ```bash
-xc64 dll1.dll dll2.dll
+xc64 link dll1.dll dll2.dll
 ```
 
 ## Contributing
