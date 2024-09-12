@@ -1,91 +1,114 @@
 #ifndef LIBLOADER_H
 #define LIBLOADER_H
 
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
 #include <iostream>
 #include <string>
 
 class LibLoader {
 public:
-    ///
-    /// Constructor that takes the names of two DLLs to load.
-    ///
-    LibLoader(const std::string& dll1, const std::string& dll2)
-        : hDll1(nullptr), hDll2(nullptr), func1(nullptr), func2(nullptr) {
-        ///
-        /// Attempt to load the DLLs.
-        ///
-        if (!loadDll(dll1, dll2)) {
-            return; /// Exit if DLLs could not be loaded.
+    LibLoader(const std::string& lib1, const std::string& lib2)
+        : handle1(nullptr), handle2(nullptr), func1(nullptr), func2(nullptr) {
+        if (!loadLib(lib1, lib2)) {
+            return;
         }
 
-        ///
-        /// Attempt to retrieve function pointers from the DLLs.
-        ///
-        if (!retrieveFunction("FunctionFromFirstDll", func1, hDll1, dll1)) {
-            FreeLibrary(hDll1); /// Unload DLLs if function retrieval fails.
-            FreeLibrary(hDll2);
-            return; /// Exit if function retrieval fails.
+        if (!retrieveFunction("FunctionFromFirstLib", func1, handle1, lib1)) {
+            unloadLib(handle1);
+            unloadLib(handle2);
+            return;
         }
-        if (!retrieveFunction("FunctionFromSecondDll", func2, hDll2, dll2)) {
-            FreeLibrary(hDll1); /// Unload DLLs if function retrieval fails.
-            FreeLibrary(hDll2);
-            return; /// Exit if function retrieval fails.
+
+        if (!retrieveFunction("FunctionFromSecondLib", func2, handle2, lib2)) {
+            unloadLib(handle1);
+            unloadLib(handle2);
+            return;
         }
     }
 
-    ///
-    /// Destructor that ensures DLLs are unloaded.
-    ///
     ~LibLoader() {
-        if (hDll1) FreeLibrary(hDll1); /// Unload the first DLL if it was loaded.
-        if (hDll2) FreeLibrary(hDll2); /// Unload the second DLL if it was loaded.
+        if (handle1) unloadLib(handle1);
+        if (handle2) unloadLib(handle2);
     }
 
-    ///
-    /// Method to call both functions from the loaded DLLs.
-    ///
     void CombineFunctions() {
-        if (func1) func1(); /// Call function from the first DLL if it's valid.
-        if (func2) func2(); /// Call function from the second DLL if it's valid.
+        if (func1) func1();
+        if (func2) func2();
     }
 
 private:
-    typedef void (*FunctionType)(); /// Typedef for function pointer type.
-    HMODULE hDll1; /// Handle to the first DLL.
-    HMODULE hDll2; /// Handle to the second DLL.
-    FunctionType func1; /// Function pointer to a function in the first DLL.
-    FunctionType func2; /// Function pointer to a function in the second DLL.
+    typedef void (*FunctionType)();
 
-    ///
-    /// Attempts to load the DLLs and returns true if successful, false otherwise.
-    ///
-    bool loadDll(const std::string& dll1, const std::string& dll2) {
-        hDll1 = LoadLibrary(dll1.c_str()); /// Load the first DLL.
-        if (!hDll1) {
-            std::cerr << "Failed to load " << dll1 << std::endl;
-            return false; /// Return false if loading fails.
+#ifdef _WIN32
+    HMODULE handle1;
+    HMODULE handle2;
+#else
+    void* handle1;
+    void* handle2;
+#endif
+
+    FunctionType func1;
+    FunctionType func2;
+
+    bool loadLib(const std::string& lib1, const std::string& lib2) {
+#ifdef _WIN32
+        handle1 = LoadLibrary(lib1.c_str());
+        if (!handle1) {
+            std::cerr << "Failed to load " << lib1 << std::endl;
+            return false;
         }
 
-        hDll2 = LoadLibrary(dll2.c_str()); /// Load the second DLL.
-        if (!hDll2) {
-            std::cerr << "Failed to load " << dll2 << std::endl;
-            FreeLibrary(hDll1); /// Unload the first DLL if the second fails to load.
-            return false; /// Return false if loading fails.
+        handle2 = LoadLibrary(lib2.c_str());
+        if (!handle2) {
+            std::cerr << "Failed to load " << lib2 << std::endl;
+            FreeLibrary(handle1);
+            return false;
         }
-        return true; /// Return true if both DLLs are loaded successfully.
+#else
+        handle1 = dlopen(lib1.c_str(), RTLD_LAZY);
+        if (!handle1) {
+            std::cerr << "Failed to load " << lib1 << ": " << dlerror() << std::endl;
+            return false;
+        }
+
+        handle2 = dlopen(lib2.c_str(), RTLD_LAZY);
+        if (!handle2) {
+            std::cerr << "Failed to load " << lib2 << ": " << dlerror() << std::endl;
+            dlclose(handle1);
+            return false;
+        }
+#endif
+        return true;
     }
 
-    ///
-    /// Attempts to retrieve a function pointer from a DLL and returns true if successful, false otherwise.
-    ///
-    bool retrieveFunction(const char* functionName, FunctionType& func, HMODULE hDll, const std::string& dllName) {
-        func = reinterpret_cast<FunctionType>(GetProcAddress(hDll, functionName)); /// Retrieve the function pointer.
+    void unloadLib(void* handle) {
+#ifdef _WIN32
+        FreeLibrary(static_cast<HMODULE>(handle));
+#else
+        dlclose(handle);
+#endif
+    }
+
+    bool retrieveFunction(const char* functionName, FunctionType& func, void* handle, const std::string& libName) {
+#ifdef _WIN32
+        func = reinterpret_cast<FunctionType>(GetProcAddress(static_cast<HMODULE>(handle), functionName));
+#else
+        func = reinterpret_cast<FunctionType>(dlsym(handle, functionName));
+#endif
         if (!func) {
-            std::cerr << "Failed to get function " << functionName << " from " << dllName << std::endl;
-            return false; /// Return false if retrieval fails.
+#ifdef _WIN32
+            std::cerr << "Failed to get function " << functionName << " from " << libName << std::endl;
+#else
+            std::cerr << "Failed to get function " << functionName << " from " << libName << ": " << dlerror() << std::endl;
+#endif
+            return false;
         }
-        return true; /// Return true if function pointer is retrieved successfully.
+        return true;
     }
 };
 
