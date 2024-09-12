@@ -1,15 +1,3 @@
-#ifdef _WIN32
-    #include <windows.h>
-    #define OS_WINDOWS
-#elif defined(__unix__) || defined(__APPLE__)
-    #include <unistd.h>
-    #include <sys/sysinfo.h>
-    #include <sys/utsname.h>
-    #define OS_UNIX
-#else
-    #error "Unsupported operating system"
-#endif
-
 #include <iostream>
 #include <vector>
 #include <string>
@@ -19,17 +7,23 @@ void windows_specific_function();
 void unix_specific_function();
 std::vector<std::string> get_system_info();
 
-// Simulated dynamic linking
-typedef void (*SystemFunction)();
-SystemFunction get_system_function() {
-    #ifdef OS_WINDOWS
-        return windows_specific_function;
-    #else
-        return unix_specific_function;
-    #endif
-}
+// Platform-specific function implementations
+#ifdef _WIN32
+    #include <windows.h>
+    #define OS_WINDOWS
+#elif defined(__unix__) || defined(__APPLE__)
+    #include <unistd.h>
+    #include <sys/utsname.h>
+    #include <sys/sysctl.h>
+    #define OS_UNIX
+#else
+    #error "Unsupported operating system"
+#endif
 
-int sysinfo() {
+typedef void (*SystemFunction)();
+SystemFunction get_system_function();
+
+int main() {
     std::cout << "OS Detection and System Information" << std::endl;
     std::cout << "-----------------------------------" << std::endl;
 
@@ -59,12 +53,12 @@ void windows_specific_function() {
     GetSystemInfo(&sysInfo);
     std::cout << "Windows-specific function:" << std::endl;
     std::cout << "Number of processors: " << sysInfo.dwNumberOfProcessors << std::endl;
-    
+
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     GlobalMemoryStatusEx(&memInfo);
     DWORDLONG totalVirtualMem = memInfo.ullTotalPageFile;
-    
+
     std::cout << "Total virtual memory: " << totalVirtualMem / (1024 * 1024) << " MB" << std::endl;
 }
 
@@ -72,10 +66,10 @@ std::vector<std::string> get_system_info() {
     std::vector<std::string> info;
     SYSTEM_INFO sysInfo;
     GetSystemInfo(&sysInfo);
-    
+
     info.push_back("Processor architecture: " + std::to_string(sysInfo.wProcessorArchitecture));
     info.push_back("Page size: " + std::to_string(sysInfo.dwPageSize) + " bytes");
-    
+
     return info;
 }
 #elif defined(OS_UNIX)
@@ -83,27 +77,35 @@ void unix_specific_function() {
     long numCPU = sysconf(_SC_NPROCESSORS_ONLN);
     std::cout << "Unix-specific function:" << std::endl;
     std::cout << "Number of processors: " << numCPU << std::endl;
-    
-    struct sysinfo memInfo;
-    sysinfo(&memInfo);
-    long long totalVirtualMem = memInfo.totalram;
-    totalVirtualMem += memInfo.totalswap;
-    totalVirtualMem *= memInfo.mem_unit;
-    
-    std::cout << "Total virtual memory: " << totalVirtualMem / (1024 * 1024) << " MB" << std::endl;
+
+    // Use sysctl for macOS to get memory information
+    int mib[2] = { CTL_HW, HW_PHYSMEM };
+    uint64_t memSize;
+    size_t len = sizeof(memSize);
+    sysctl(mib, 2, &memSize, &len, NULL, 0);
+
+    std::cout << "Total virtual memory: " << memSize / (1024 * 1024) << " MB" << std::endl;
 }
 
 std::vector<std::string> get_system_info() {
     std::vector<std::string> info;
     struct utsname unameData;
     uname(&unameData);
-    
+
     info.push_back("System name: " + std::string(unameData.sysname));
     info.push_back("Node name: " + std::string(unameData.nodename));
     info.push_back("Release: " + std::string(unameData.release));
     info.push_back("Version: " + std::string(unameData.version));
     info.push_back("Machine: " + std::string(unameData.machine));
-    
+
     return info;
 }
 #endif
+
+SystemFunction get_system_function() {
+    #ifdef OS_WINDOWS
+        return windows_specific_function;
+    #else
+        return unix_specific_function;
+    #endif
+}
