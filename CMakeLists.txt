@@ -10,5 +10,4 @@ include_directories(${PROJECT_SOURCE_DIR}/src)
 # Add only the specified source files
 add_executable(XC64
     src/library_loader.cpp
-    src/
 )
