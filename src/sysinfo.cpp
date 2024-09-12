@@ -4,6 +4,7 @@
 #elif defined(__unix__) || defined(__APPLE__)
     #include <unistd.h>
     #include <sys/sysinfo.h>
+    #include <sys/utsname.h>
     #define OS_UNIX
 #else
     #error "Unsupported operating system"
@@ -94,9 +95,14 @@ void unix_specific_function() {
 
 std::vector<std::string> get_system_info() {
     std::vector<std::string> info;
+    struct utsname unameData;
+    uname(&unameData);
     
-    info.push_back("System name: " + std::string(sysconf(_SC_SYSNAME)));
-    info.push_back("Page size: " + std::to_string(sysconf(_SC_PAGESIZE)) + " bytes");
+    info.push_back("System name: " + std::string(unameData.sysname));
+    info.push_back("Node name: " + std::string(unameData.nodename));
+    info.push_back("Release: " + std::string(unameData.release));
+    info.push_back("Version: " + std::string(unameData.version));
+    info.push_back("Machine: " + std::string(unameData.machine));
     
     return info;
 }
