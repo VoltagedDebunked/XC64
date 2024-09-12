@@ -1,4 +1,4 @@
-name: Build
+name: build-xc64
 
 on:
   push:
